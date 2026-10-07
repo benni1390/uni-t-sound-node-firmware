@@ -1,0 +1,8 @@
+.git
+.local
+.idea
+*.iml
+.DS_Store
+.pio
+.venv
+include/secrets.h

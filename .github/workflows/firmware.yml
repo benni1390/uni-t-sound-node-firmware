@@ -1,0 +1,90 @@
+name: Firmware
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build firmware and export binaries
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: firmware-artifacts
+          outputs: type=local,dest=firmware-out
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Name release assets and create checksums
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || github.sha }}
+        run: |
+          mkdir -p release
+          cp firmware-out/firmware.factory.bin \
+            "release/uni-t-sound-node-${VERSION}-esp32c6.factory.bin"
+          cp firmware-out/firmware.bin \
+            "release/uni-t-sound-node-${VERSION}-esp32c6.bin"
+          cd release
+          sha256sum *.bin > SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ github.sha }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Validate release tag
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag must use vMAJOR.MINOR.PATCH, optionally followed by a prerelease suffix: $TAG"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: firmware-${{ github.sha }}
+          path: release
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+        run: |
+          args=(--title "$TAG" --generate-notes --verify-tag)
+          if [[ "$TAG" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$TAG" release/* "${args[@]}"

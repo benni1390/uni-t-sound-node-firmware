@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "schedule": ["before 5am on monday"],
+  "prConcurrentLimit": 5,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update PlatformIO library versions",
+      "managerFilePatterns": ["/^platformio\\.ini$/"],
+      "matchStrings": [
+        "; renovate: datasource=(?<datasource>[^ ]+) depName=(?<depName>[^\\s]+)\\n\\s*[^\\n]+@(?<currentValue>[^\\s]+)"
+      ],
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the pioarduino ESP32 platform release",
+      "managerFilePatterns": ["/^platformio\\.ini$/"],
+      "matchStrings": [
+        "platform = https://github\\.com/pioarduino/platform-espressif32/releases/download/(?<currentValue>[^/]+)/platform-espressif32\\.zip"
+      ],
+      "depNameTemplate": "pioarduino/platform-espressif32",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "description": "Update PlatformIO installed in the build image",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": ["pip install platformio==(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "platformio",
+      "datasourceTemplate": "pypi",
+      "versioningTemplate": "pep440"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["platformio.ini"],
+      "groupName": "PlatformIO dependencies"
+    }
+  ]
+}
