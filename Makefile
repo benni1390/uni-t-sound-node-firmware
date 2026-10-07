@@ -24,7 +24,7 @@ upload: build tools ## Build in Docker, then flash the image over host USB
 	$(VENV)/bin/python -m esptool --chip esp32c6 write-flash 0x0 $(BIN)
 
 monitor: tools ## Open the serial monitor (115200 baud)
-	$(VENV)/bin/python -m platformio device monitor
+	$(VENV)/bin/python -m platformio device monitor -d $(VENV) -b 115200
 
 flash: upload ## Flash, then open the serial monitor
 	$(MAKE) monitor
