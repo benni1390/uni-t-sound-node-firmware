@@ -83,6 +83,19 @@ onto the runner. Changes to `platformio.ini` invalidate the dependency layer.
 Host flashing and serial monitor tools are installed into `.venv` by
 `make tools`.
 
+## Code structure
+
+| File | Purpose |
+|------|---------|
+| `src/main.cpp` | `setup()`/`loop()` wiring only |
+| `src/config.h` | Build-time settings and defaults (`include/secrets.h` overrides) |
+| `src/measurement.*` | UT353BT frame parser (no hardware dependencies) |
+| `src/meter_ble.*` | BLE connection and polling of the meter |
+| `src/audio.*` | I2S microphone capture and mic-presence detection |
+| `src/server_stream.*` | WebSocket stream of readings and audio |
+| `src/mqtt_publisher.*` | Optional MQTT publishing |
+| `src/wifi_manager.*`, `src/status.*` | WiFi setup and serial diagnostics |
+
 ## Automatic dependency updates
 
 This repository uses Renovate for GitHub Actions, Docker base images,
@@ -107,6 +120,11 @@ The node streams audio and readings to the configured receiver and does not
 buffer data when the receiver or Wi-Fi is unavailable. Audio may capture
 speech; obtain consent and secure the receiver and its recordings. No data is
 sent to a third-party cloud by this firmware.
+
+## Author
+
+Built by [@benni1390](https://github.com/benni1390). See the profile for more
+projects and contact information.
 
 ## License
 
