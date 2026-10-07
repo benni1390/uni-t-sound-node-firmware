@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+*.iml
+.local/
+__pycache__/
+*.py[cod]
+*.db
+.venv/
+.pio/
+.pio-home/
+include/secrets.h
