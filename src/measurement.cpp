@@ -51,6 +51,7 @@ bool parse_measurement(const uint8_t *data, size_t length, Measurement &out) {
   snprintf(out.speed, sizeof(out.speed), "%s", speed_name);
 
   size_t used = 0;
+  out.flags[0] = '\0';
   auto append_flag = [&out, &used](const char *flag) {
     const int written = snprintf(out.flags + used, sizeof(out.flags) - used,
                                  "%s%s", used == 0 ? "" : ",", flag);

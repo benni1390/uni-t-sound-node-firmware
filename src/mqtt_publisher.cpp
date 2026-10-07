@@ -65,8 +65,6 @@ void ensure_mqtt() {
     mqtt_state_pending = true;
     have_published_reading_state = false;
     have_published_flags = false;
-    snprintf(availability_topic, sizeof(availability_topic), "%savailability",
-             meter_topic_prefix());
     mqtt_client.publish(availability_topic, "online", true);
     Serial.println("MQTT: connected");
   } else {
@@ -124,7 +122,6 @@ void publish_measurement(const Measurement &current) {
       last_diagnostic_publish_ms = now;
     }
   }
-
 }
 
 void publish_ble_connection_state() {

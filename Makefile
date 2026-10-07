@@ -5,7 +5,7 @@ BIN := .pio/build/esp32c6/firmware.factory.bin
 IMAGE := uni-t-ble-firmware
 SERVER_DIR ?= ../uni-t-sound-node-server
 
-.PHONY: help tools config build upload monitor flash clean deploy deploy-server deploy-device
+.PHONY: help tools config build test upload monitor flash clean deploy deploy-server deploy-device
 
 help: ## Show available project commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -19,6 +19,9 @@ config: ## Create include/secrets.h from the example if missing
 build: config ## Compile the firmware in Docker
 	docker build --build-arg PIO_UID=$(shell id -u) -t $(IMAGE) .
 	docker run --rm -v "$(CURDIR)":/workspace -w /workspace $(IMAGE) run
+
+test: tools ## Run host-side unit tests (no hardware needed)
+	$(VENV)/bin/python -m platformio test -e native
 
 upload: build tools ## Build in Docker, then flash the image over host USB
 	$(VENV)/bin/python -m esptool --chip esp32c6 write-flash 0x0 $(BIN)
