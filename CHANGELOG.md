@@ -7,6 +7,8 @@ releases are tagged `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-07
+
 - Split `main.cpp` into focused modules (BLE, audio, MQTT, WebSocket, WiFi,
   status, frame parser).
 - Add host-side unit tests for the frame parser, run in CI.
