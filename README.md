@@ -62,6 +62,7 @@ flashing.
 ```sh
 make help       # list targets
 make build      # compile in Docker
+make test       # run host-side unit tests (no hardware needed)
 make upload     # compile and flash over USB
 make flash      # compile, flash, then open the serial monitor
 make monitor    # open the serial monitor without flashing
@@ -89,7 +90,8 @@ Host flashing and serial monitor tools are installed into `.venv` by
 |------|---------|
 | `src/main.cpp` | `setup()`/`loop()` wiring only |
 | `src/config.h` | Build-time settings and defaults (`include/secrets.h` overrides) |
-| `src/measurement.*` | UT353BT frame parser (no hardware dependencies) |
+| `src/measurement.*` | UT353BT frame parser (no hardware dependencies, unit-tested) |
+| `test/` | Host-side Unity tests, run with `make test` and in CI |
 | `src/meter_ble.*` | BLE connection and polling of the meter |
 | `src/audio.*` | I2S microphone capture and mic-presence detection |
 | `src/server_stream.*` | WebSocket stream of readings and audio |
@@ -113,6 +115,39 @@ image, and SHA-256 checksums as release assets. Verify `SHA256SUMS.txt`
 before flashing; the factory image can be flashed with
 `esptool --chip esp32c6 write-flash 0x0 <factory-image>`. See
 [`CONTRIBUTING.md`](CONTRIBUTING.md) for the release steps.
+
+### Flash a published release
+
+1. Open the repository's [GitHub Releases](https://github.com/benni1390/uni-t-sound-node-firmware/releases)
+   page and download the factory image
+   (`uni-t-sound-node-<version>-esp32c6.factory.bin`), the application image,
+   and `SHA256SUMS.txt`. Verify both images before flashing with
+   `sha256sum -c SHA256SUMS.txt` (on macOS, use
+   `shasum -a 256 -c SHA256SUMS.txt`).
+2. Install Python 3, then install esptool:
+
+   ```sh
+   python3 -m pip install esptool
+   ```
+
+3. Connect the ESP32-C6 over USB, identify its serial port (for example,
+   `/dev/cu.usbmodem...` on macOS or `/dev/ttyACM0` on Linux), and run:
+
+   ```sh
+   python3 -m esptool --chip esp32c6 --port <PORT> write-flash 0x0 \
+     uni-t-sound-node-<version>-esp32c6.factory.bin
+   ```
+
+   Replace `<PORT>` and `<version>` with the values for your system and
+   downloaded release. If the ESP32-C6 does not enter download mode
+   automatically, hold BOOT while pressing and releasing RESET, then release
+   BOOT and retry.
+
+The factory image is the complete image to flash at address `0x0`; do not use
+the application-only `.bin` at that address. Release images do not contain
+your Wi-Fi or receiver settings. To use the node with your own network and
+receiver, configure `include/secrets.h` and build/flash a customized image
+with `make upload` as described above.
 
 ## Privacy
 

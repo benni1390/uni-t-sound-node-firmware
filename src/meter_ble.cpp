@@ -4,6 +4,7 @@
 #include <NimBLEDevice.h>
 #include <freertos/FreeRTOS.h>
 
+#include <atomic>
 #include <cstdio>
 #include <strings.h>
 
@@ -27,8 +28,8 @@ char topic_prefix[96] = {};
 uint32_t last_scan_ms = 0;
 uint32_t last_poll_ms = 0;
 uint32_t ble_poll_failures = 0;
-volatile uint32_t ble_notifications = 0;
-volatile uint32_t ble_parse_errors = 0;
+std::atomic<uint32_t> ble_notifications{0};
+std::atomic<uint32_t> ble_parse_errors{0};
 volatile uint32_t last_measurement_ms = 0;
 volatile float last_db = -1.0f;
 
@@ -36,8 +37,7 @@ void on_notification(NimBLERemoteCharacteristic *, uint8_t *data, size_t length,
                      bool) {
   Measurement parsed{};
   if (!parse_measurement(data, length, parsed)) {
-    ++ble_parse_errors;
-    if (ble_parse_errors <= 5) {
+    if (++ble_parse_errors <= 5) {
       Serial.printf("BLE: unparsable notification (%u bytes):", length);
       for (size_t i = 0; i < length && i < 24; ++i) {
         Serial.printf(" %02x", data[i]);

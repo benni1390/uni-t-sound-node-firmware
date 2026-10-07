@@ -3,7 +3,8 @@
 ## Changes
 
 1. Create a branch and make a focused change.
-2. Build the firmware with `make build`.
+2. Run the unit tests with `make test` and build the firmware with
+   `make build`.
 3. Open a pull request describing the change and the hardware/configuration
    used to verify it.
 
