@@ -87,6 +87,9 @@ constexpr uint32_t kAudioSampleRate = 16000;
 constexpr size_t kAudioSamplesPerRead = 256;
 constexpr size_t kAudioStreamBufferBytes = 16384;
 constexpr size_t kAudioSendChunkBytes = 1024;
+// A connected mic always shows some noise; a missing one reads as a constant.
+constexpr int32_t kMicMinSpan = 4;
+constexpr uint32_t kMicHoldMs = 3000;
 constexpr uint32_t kWsReconnectIntervalMs = 5000;
 
 WiFiClient network_client;
@@ -123,6 +126,8 @@ volatile uint32_t ble_notifications = 0;
 volatile uint32_t ble_parse_errors = 0;
 volatile uint32_t last_measurement_ms = 0;
 volatile uint32_t audio_bytes_sent = 0;
+volatile bool mic_present = false;
+volatile uint32_t mic_live_until_ms = 0;
 volatile uint16_t audio_peak = 0;
 volatile uint16_t audio_min_peak = 0xFFFF;
 volatile float last_db = -1.0f;
@@ -239,21 +244,28 @@ void record_audio_samples() {
     vTaskDelay(pdMS_TO_TICKS(10));  // never spin; keeps the watchdog fed
     return;
   }
-  if (!server_connected) {
-    return;
-  }
 
   const size_t sample_count = bytes_read / sizeof(input[0]);
+  int32_t chunk_peak = 0;
+  int32_t lo = INT32_MAX;
+  int32_t hi = INT32_MIN;
   for (size_t i = 0; i < sample_count; ++i) {
     output[i] = static_cast<int16_t>(input[i] >> 16);
-  }
-  int32_t chunk_peak = 0;
-  for (size_t i = 0; i < sample_count; ++i) {
-    const int32_t v = output[i] < 0 ? -static_cast<int32_t>(output[i]) : output[i];
+    const int32_t sample = output[i];
+    const int32_t v = sample < 0 ? -sample : sample;
     if (v > chunk_peak) chunk_peak = v;
+    if (sample < lo) lo = sample;
+    if (sample > hi) hi = sample;
   }
+  if (hi - lo >= kMicMinSpan) {
+    mic_live_until_ms = millis() + kMicHoldMs;
+  }
+  mic_present = static_cast<int32_t>(mic_live_until_ms - millis()) > 0;
   if (chunk_peak > audio_peak) audio_peak = chunk_peak;
   if (chunk_peak < audio_min_peak) audio_min_peak = chunk_peak;
+  if (!server_connected || !mic_present) {
+    return;
+  }
   xStreamBufferSend(audio_stream, output, sample_count * sizeof(output[0]), 0);
 }
 
@@ -702,7 +714,8 @@ void print_status() {
     // peak never varies between chunks; a live mic always has noise.
     const uint16_t peak = audio_peak;
     const uint16_t low = audio_min_peak;
-    const char *verdict = peak < 8 ? "NO SIGNAL (mic missing/wired wrong?)"
+    const char *verdict = !mic_present ? "NOT STREAMING (no mic signal)"
+                          : peak < 8 ? "NO SIGNAL (mic missing/wired wrong?)"
                           : (peak == low ? "constant value (mic not driving data?)"
                                          : "signal present");
     Serial.printf("  Mic: peak %u, min chunk peak %u -> %s\n", peak, low, verdict);

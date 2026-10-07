@@ -13,7 +13,8 @@ contains only the ESP32 firmware and its build/release tooling.
 - Reads sound level and status data from a UNI-T UT353BT over BLE.
 - Optionally publishes readings and meter state to MQTT.
 - Streams 16 kHz mono microphone audio and meter readings over one ordered
-  WebSocket connection.
+  WebSocket connection. Audio is only sent while the microphone delivers a
+  live signal; a missing or stuck mic is detected and nothing is streamed.
 - Uses a 15-second pre-trigger buffer and threshold-triggered clip recording
   on the receiver; the node itself does not store audio or readings.
 
